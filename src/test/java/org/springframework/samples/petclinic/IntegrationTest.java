@@ -26,7 +26,8 @@ import java.lang.annotation.Target;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 import org.springframework.context.annotation.Import;
-import org.springframework.test.context.jdbc.Sql;
+import org.springframework.test.context.TestExecutionListeners;
+import org.springframework.test.context.TestExecutionListeners.MergeMode;
 
 /**
  * Starts the whole application on a random port with the database chosen by
@@ -39,7 +40,7 @@ import org.springframework.test.context.jdbc.Sql;
 @Inherited
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
 @Import(DatabaseTestConfiguration.class)
-@Sql({ "classpath:db/clear-tables-${database}.sql", "classpath:db/${database}/data.sql" })
+@TestExecutionListeners(listeners = ResetDatabaseListener.class, mergeMode = MergeMode.MERGE_WITH_DEFAULTS)
 public @interface IntegrationTest {
 
 }

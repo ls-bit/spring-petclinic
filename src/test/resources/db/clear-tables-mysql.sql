@@ -1,4 +1,4 @@
--- Run before db/mysql/data.sql by @IntegrationTest
+-- Run before db/mysql/data.sql by ResetDatabaseListener
 SET FOREIGN_KEY_CHECKS = 0;
 TRUNCATE TABLE visits;
 TRUNCATE TABLE pets;

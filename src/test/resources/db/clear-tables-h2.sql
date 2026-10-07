@@ -1,4 +1,4 @@
--- Run before db/h2/data.sql by @IntegrationTest
+-- Run before db/h2/data.sql by ResetDatabaseListener
 SET REFERENTIAL_INTEGRITY FALSE;
 TRUNCATE TABLE visits RESTART IDENTITY;
 TRUNCATE TABLE pets RESTART IDENTITY;
