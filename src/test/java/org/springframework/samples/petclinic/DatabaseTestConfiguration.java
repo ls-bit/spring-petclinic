@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2025 the original author or authors.
+ * Copyright 2012-2026 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,32 +16,37 @@
 
 package org.springframework.samples.petclinic;
 
-import org.springframework.boot.SpringApplication;
+import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 import org.testcontainers.mysql.MySQLContainer;
+import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
 
 /**
- * PetClinic Spring Boot Application.
- *
- * @author Dave Syer
+ * Starts PostgreSQL or MySQL in Docker when the {@code postgres} or {@code mysql} profile
+ * is active; without either profile the application uses H2. As Spring beans, the
+ * containers live as long as the application context, so all test classes sharing that
+ * context share one container.
  */
-@Configuration
-public class MysqlTestApplication {
+@TestConfiguration(proxyBeanMethods = false)
+public class DatabaseTestConfiguration {
 
-	@ServiceConnection
-	@Profile("mysql")
+	// Same images as docker-compose.yml
+
 	@Bean
-	static MySQLContainer container() {
-		return new MySQLContainer(DockerImageName.parse("mysql:9.7"));
+	@ServiceConnection
+	@Profile("postgres")
+	PostgreSQLContainer postgres() {
+		return new PostgreSQLContainer(DockerImageName.parse("postgres:18.4"));
 	}
 
-	public static void main(String[] args) {
-		SpringApplication.run(PetClinicApplication.class, "--spring.profiles.active=mysql",
-				"--spring.docker.compose.enabled=false");
+	@Bean
+	@ServiceConnection
+	@Profile("mysql")
+	MySQLContainer mysql() {
+		return new MySQLContainer(DockerImageName.parse("mysql:9.7"));
 	}
 
 }

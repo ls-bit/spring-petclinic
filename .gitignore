@@ -46,3 +46,6 @@ out/
 _site/
 *.css
 !petclinic.css
+
+### Allure (private Node.js runtime and report package) ###
+.allure/

@@ -96,7 +96,48 @@ docker compose up postgres
 
 ## Test Applications
 
-At development time we recommend you use the test applications set up as `main()` methods in `PetClinicIntegrationTests` (using the default H2 database and also adding Spring Boot Devtools), `MySqlTestApplication` and `PostgresIntegrationTests`. These are set up so that you can run the apps in your IDE to get fast feedback and also run the same classes as integration tests against the respective database. The MySql integration tests use Testcontainers to start the database in a Docker container, and the Postgres tests use Docker Compose to do the same thing.
+At development time we recommend you use the test applications set up as `main()` methods in `PetClinicIntegrationTests` (using the default H2 database and also adding Spring Boot Devtools) and `PetClinicTestApplication`.
+Run `PetClinicTestApplication` with `--spring.profiles.active=postgres` or `mysql` to start that database in a Docker container with Testcontainers.
+
+Integration tests and e2e tests share one setup through the `@IntegrationTest` annotation: the whole app on a random port, the database from `DatabaseTestConfiguration`, and a reset to the sample data before each test.
+They use H2 unless a profile selects PostgreSQL or MySQL, e.g. `./mvnw verify -Dspring.profiles.active=postgres`.
+`PostgresIntegrationTests` and `MySqlIntegrationTests` run the `PetClinicIntegrationTests` against those databases in every build where Docker is available.
+
+## Browser Tests
+
+Browser tests use [Playwright for Java](https://playwright.dev/java/) and live in `src/test/java/.../e2e`.
+They are tagged `e2e` and skipped by the normal build.
+Browser tests extend `BrowserTestBase`; API tests, which send HTTP requests without a browser, extend `ApiTestBase`.
+The `e2e` profile runs them with Failsafe after the unit and integration tests:
+
+```bash
+./mvnw verify -Pe2e
+```
+
+Playwright downloads its browsers on the first run.
+On Linux (including WSL) the browsers also need some system libraries; install them once with:
+
+```bash
+./mvnw exec:java -Dexec.mainClass=com.microsoft.playwright.CLI -Dexec.classpathScope=test -Dexec.args="install-deps"
+```
+
+Pass `-Dplaywright.browser=firefox|webkit` to use another browser and `-Dplaywright.headless=false` to watch the tests run.
+The database setup is the same as for the integration tests, see [Test Applications](#test-applications).
+See `BrowserTestBase` for where traces of failed tests are saved.
+
+### Test report
+
+JaCoCo measures code coverage in three reports: unit and integration tests (`target/site/jacoco`), e2e tests (`target/site/jacoco-e2e`, `e2e` profile only) and all tests together (`target/site/jacoco-all`, `e2e` profile only).
+A failing e2e test fails the build only after these reports are written.
+[Allure](https://allurereport.org/) combines the results of all tests that ran, the screenshots and traces of failed e2e tests, and the coverage reports into one report:
+
+```bash
+./mvnw verify -Pe2e
+./mvnw allure:serve    # opens the report in the browser; allure:report writes it to target/site/allure-maven-plugin
+```
+
+The report opens on a start page with one card for the test results and one per coverage report (added by `allure-coverage-plugin.mjs`).
+The first report run downloads Node.js and Allure into `.allure/`.
 
 ## Compiling the CSS
 

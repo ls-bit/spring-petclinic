@@ -29,8 +29,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase.Replace;
+import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.samples.petclinic.DatabaseTestConfiguration;
 import org.springframework.samples.petclinic.owner.Owner;
 import org.springframework.samples.petclinic.owner.OwnerRepository;
 import org.springframework.samples.petclinic.owner.Pet;
@@ -70,8 +72,9 @@ import org.springframework.transaction.annotation.Transactional;
  * @author Dave Syer
  */
 @DataJpaTest
-// Ensure that if the mysql profile is active we connect to the real database:
+// Ensure that if the mysql or postgres profile is active we connect to the real database:
 @AutoConfigureTestDatabase(replace = Replace.NONE)
+@Import(DatabaseTestConfiguration.class)
 // @TestPropertySource("/application-postgres.properties")
 class ClinicServiceTests {
 
