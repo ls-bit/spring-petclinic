@@ -30,11 +30,18 @@
     <!-- Checkstyle needs to stay on v12 since v13 sets minimal jdk to 21 - https://checkstyle.org/releasenotes.html#Release_13.0.0 -->
     <checkstyle.version>12.3.1</checkstyle.version>
     <jacoco.version>0.8.15</jacoco.version>
+    <!-- Start each run with fresh coverage data -->
+    <jacoco.append>false</jacoco.append>
     <libsass.version>0.3.4</libsass.version>
     <lifecycle-mapping>1.0.0</lifecycle-mapping>
     <maven-checkstyle.version>3.6.0</maven-checkstyle.version>
     <nohttp-checkstyle.version>0.0.11</nohttp-checkstyle.version>
     <spring-format.version>0.0.47</spring-format.version>
+
+    <!-- Browser tests -->
+    <playwright.version>1.63.0</playwright.version>
+    <allure.version>3.0.0</allure.version>
+    <allure-maven.version>3.1.0</allure-maven.version>
   </properties>
 
   <dependencies>
@@ -178,10 +185,73 @@
       <artifactId>testcontainers-mysql</artifactId>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>org.testcontainers</groupId>
+      <artifactId>testcontainers-postgresql</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.microsoft.playwright</groupId>
+      <artifactId>playwright</artifactId>
+      <version>${playwright.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.qameta.allure</groupId>
+      <artifactId>allure-jupiter</artifactId>
+      <version>${allure.version}</version>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <build>
     <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <configuration>
+          <!-- e2e tests run with Failsafe in the e2e profile -->
+          <excludedGroups>e2e</excludedGroups>
+        </configuration>
+      </plugin>
+      <plugin>
+        <!-- The Allure report shows whatever results and coverage reports it finds,
+          so remove those of earlier runs -->
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-clean-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>clean-test-reports</id>
+            <goals>
+              <goal>clean</goal>
+            </goals>
+            <phase>initialize</phase>
+            <configuration>
+              <excludeDefaultDirectories>true</excludeDefaultDirectories>
+              <filesets>
+                <fileset>
+                  <directory>${project.build.directory}/allure-results</directory>
+                </fileset>
+                <fileset>
+                  <directory>${project.build.directory}</directory>
+                  <includes>
+                    <include>jacoco*.exec</include>
+                  </includes>
+                </fileset>
+                <fileset>
+                  <directory>${project.reporting.outputDirectory}/jacoco</directory>
+                </fileset>
+                <fileset>
+                  <directory>${project.reporting.outputDirectory}/jacoco-e2e</directory>
+                </fileset>
+                <fileset>
+                  <directory>${project.reporting.outputDirectory}/jacoco-all</directory>
+                </fileset>
+              </filesets>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-enforcer-plugin</artifactId>
@@ -242,7 +312,7 @@
               <configLocation>src/checkstyle/nohttp-checkstyle.xml</configLocation>
               <sourceDirectories>${basedir}</sourceDirectories>
               <includes>**/*</includes>
-              <excludes>**/.git/**/*,**/.idea/**/*,**/target/**/,**/.flattened-pom.xml,**/*.class</excludes>
+              <excludes>**/.git/**/*,**/.idea/**/*,**/target/**/,**/.flattened-pom.xml,**/*.class,**/.allure/**/*</excludes>
               <propertyExpansion>config_loc=${basedir}/src/checkstyle/</propertyExpansion>
             </configuration>
           </execution>
@@ -251,6 +321,16 @@
       <plugin>
         <groupId>org.graalvm.buildtools</groupId>
         <artifactId>native-maven-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <!-- Builds the test report from target/allure-results, see allurerc.mjs -->
+        <groupId>io.qameta.allure</groupId>
+        <artifactId>allure-maven</artifactId>
+        <version>${allure-maven.version}</version>
+        <configuration>
+          <!-- One HTML file for the test results, so a downloaded report opens without a web server -->
+          <singleFile>true</singleFile>
+        </configuration>
       </plugin>
       <plugin>
         <groupId>org.springframework.boot</groupId>
@@ -320,6 +400,81 @@
   </licenses>
 
   <profiles>
+    <profile>
+      <!-- Runs the e2e tests with Failsafe after the unit and integration tests,
+        and builds coverage reports for the e2e tests and for all tests together -->
+      <id>e2e</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-failsafe-plugin</artifactId>
+            <configuration>
+              <groups>e2e</groups>
+              <includes>
+                <include>**/*Tests.java</include>
+              </includes>
+            </configuration>
+          </plugin>
+          <plugin>
+            <groupId>org.jacoco</groupId>
+            <artifactId>jacoco-maven-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>prepare-agent-e2e</id>
+                <goals>
+                  <goal>prepare-agent-integration</goal>
+                </goals>
+                <configuration>
+                  <destFile>${project.build.directory}/jacoco-e2e.exec</destFile>
+                </configuration>
+              </execution>
+              <execution>
+                <id>report-e2e</id>
+                <goals>
+                  <goal>report</goal>
+                </goals>
+                <phase>post-integration-test</phase>
+                <configuration>
+                  <dataFile>${project.build.directory}/jacoco-e2e.exec</dataFile>
+                  <outputDirectory>${project.reporting.outputDirectory}/jacoco-e2e</outputDirectory>
+                </configuration>
+              </execution>
+              <execution>
+                <id>merge-all</id>
+                <goals>
+                  <goal>merge</goal>
+                </goals>
+                <phase>post-integration-test</phase>
+                <configuration>
+                  <fileSets>
+                    <fileSet>
+                      <directory>${project.build.directory}</directory>
+                      <includes>
+                        <include>jacoco.exec</include>
+                        <include>jacoco-e2e.exec</include>
+                      </includes>
+                    </fileSet>
+                  </fileSets>
+                  <destFile>${project.build.directory}/jacoco-all.exec</destFile>
+                </configuration>
+              </execution>
+              <execution>
+                <id>report-all</id>
+                <goals>
+                  <goal>report</goal>
+                </goals>
+                <phase>post-integration-test</phase>
+                <configuration>
+                  <dataFile>${project.build.directory}/jacoco-all.exec</dataFile>
+                  <outputDirectory>${project.reporting.outputDirectory}/jacoco-all</outputDirectory>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
     <profile>
       <id>css</id>
       <build>

@@ -25,5 +25,32 @@ jobs:
           java-version: ${{matrix.java}}
           distribution: 'adopt'
           cache: maven
-      - name: Build with Maven Wrapper
-        run: ./mvnw -B verify
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('pom.xml') }}
+      - name: Install Chromium for Playwright with its system libraries
+        run: ./mvnw -B -q exec:java -Dexec.mainClass=com.microsoft.playwright.CLI -Dexec.classpathScope=test -Dexec.args="install --with-deps chromium"
+      - name: Build with Maven Wrapper, including e2e tests
+        run: ./mvnw -B verify -Pe2e
+        env:
+          # Chromium is installed above; this stops Playwright from also downloading Firefox and WebKit
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 1
+      - name: Cache Allure (Node.js and report package)
+        if: ${{ !cancelled() }}
+        uses: actions/cache@v4
+        with:
+          path: .allure
+          key: allure-${{ runner.os }}-${{ hashFiles('pom.xml') }}
+      - name: Build test report
+        if: ${{ !cancelled() }}
+        run: ./mvnw -B allure:report
+      - name: Upload test report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-report
+          path: |
+            target/site/allure-maven-plugin
+            target/playwright-traces

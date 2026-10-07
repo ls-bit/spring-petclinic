@@ -29,6 +29,8 @@ ext.springJavaformatCheckstyleVersion = "0.0.47"
 ext.webjarsLocatorLiteVersion = "1.1.3"
 ext.webjarsFontawesomeVersion = "4.7.0"
 ext.webjarsBootstrapVersion = "5.3.8"
+ext.playwrightVersion = "1.63.0"
+ext.allureVersion = "3.0.0"
 
 dependencies {
   implementation 'org.springframework.boot:spring-boot-starter-cache'
@@ -54,12 +56,18 @@ dependencies {
   testImplementation 'org.springframework.boot:spring-boot-docker-compose'
   testImplementation 'org.testcontainers:testcontainers-junit-jupiter'
   testImplementation 'org.testcontainers:testcontainers-mysql'
+  testImplementation 'org.testcontainers:testcontainers-postgresql'
+  testImplementation "com.microsoft.playwright:playwright:${playwrightVersion}"
+  testImplementation "io.qameta.allure:allure-jupiter:${allureVersion}"
   checkstyle "io.spring.javaformat:spring-javaformat-checkstyle:${springJavaformatCheckstyleVersion}"
   checkstyle "com.puppycrawl.tools:checkstyle:${checkstyleVersion}"
 }
 
 tasks.named('test') {
-  useJUnitPlatform()
+  useJUnitPlatform {
+    excludeTags 'e2e'
+  }
+  systemProperty 'allure.results.directory', layout.buildDirectory.dir('allure-results').get().asFile.path
 }
 
 tasks.named("cyclonedxDirectBom").configure {
@@ -75,6 +83,11 @@ checkstyle {
 checkstyleNohttp {
   configDirectory = project.file('src/checkstyle')
   configFile = file('src/checkstyle/nohttp-checkstyle.xml')
+}
+
+nohttp {
+  // Node.js and the Allure package downloaded by the Allure Maven plugin
+  source.exclude "**/.allure/**"
 }
 
 tasks.named("formatMain").configure { dependsOn("checkstyleMain") }
