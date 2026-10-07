@@ -138,6 +138,7 @@ A failing e2e test fails the build only after these reports are written.
 
 The report opens on a start page with one card for the test results and one per coverage report (added by `allure-coverage-plugin.mjs`).
 The first report run downloads Node.js and Allure into `.allure/`.
+The GitHub Actions Maven build runs the same steps and uploads the report as the `test-report` artifact; open its `index.html` directly, no web server needed.
 
 ## Compiling the CSS
 

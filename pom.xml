@@ -327,6 +327,10 @@
         <groupId>io.qameta.allure</groupId>
         <artifactId>allure-maven</artifactId>
         <version>${allure-maven.version}</version>
+        <configuration>
+          <!-- One HTML file for the test results, so a downloaded report opens without a web server -->
+          <singleFile>true</singleFile>
+        </configuration>
       </plugin>
       <plugin>
         <groupId>org.springframework.boot</groupId>
